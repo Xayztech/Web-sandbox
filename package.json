@@ -1,7 +1,7 @@
 {
-  "name": "web-sandbox",
-  "version": "1.0.0",
-  "description": "Web Sandbox - Browse websites safely in an isolated environment",
+  "name": "websandbox",
+  "version": "2.0.0",
+  "description": "Full-featured web sandbox proxy with persistent sessions",
   "main": "web.js",
   "engines": {
     "node": ">=20.0.0"
@@ -15,6 +15,8 @@
     "node-fetch": "^2.7.0",
     "cheerio": "^1.0.0-rc.12",
     "uuid": "^9.0.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "tough-cookie": "^4.1.4",
+    "follow-redirects": "^1.15.6"
   }
 }

@@ -1,70 +1,71 @@
-# 🛡 WebSandbox
+# 🛡 WebSandbox v3
 
-> An isolated, VM-like web browser sandbox. Browse any website safely with persistent sessions across reloads, reboots, and devices.
-
----
-
-## ✨ Features
-
-- 🌐 **Proxy-based sandbox** — all traffic routes through the server, isolating your device
-- 💾 **Persistent sessions** — history & bookmarks survive page reloads, tab closes, browser restarts
-- 🕓 **Browsing history** — last 200 pages tracked per session
-- ☆ **Bookmarks** — save and revisit your favourite pages
-- ↩ **Back / Forward navigation** — full nav stack in the sandbox
-- 📱 **Responsive** — works on desktop, tablet, and mobile
-- ⚡ **Fast** — asset proxying with CSS rewriting, automatic redirect following
+> Full-featured proxy-based web sandbox. Browse any site in an isolated environment. Sessions persist across reloads, browser restarts, and devices via localStorage + server sync.
 
 ---
 
-## 🗂 Project Structure
+## ✅ What's Fixed in v3
+
+| Issue | Fix |
+|-------|-----|
+| Links opening outside sandbox | `target=_blank` stripped from ALL anchors server-side + client-side interceptor |
+| `window.open()` escaping sandbox | Overridden in injected script, redirects into proxy |
+| History items not navigating | Fixed event delegation — `navigate(url)` called correctly |
+| Sidebar toggle breaking iframe | Sidebar uses CSS width transition only, iframe unaffected |
+| Cloudflare / bot detection | 4-strategy fetch: Chrome UA → Mobile UA → Minimal/curl → Googlebot |
+| Sites blocking proxy | Multiple fallback strategies + SSL cert bypass |
+| Redirects going outside sandbox | `follow-redirects` with full cookie passthrough |
+| CSS/fonts/images broken | CSS rewriter for url(), @import, inline styles, srcset |
+| Login not working | Per-session cookie jar with domain matching |
+| POST forms not working | `/form-post` endpoint with full body forwarding |
+| GET forms not working | `/form-get` endpoint reconstructs URL with query params |
+| Session lost on reload | localStorage + server sync on every page load |
+
+---
+
+## 🗂 File Structure
 
 ```
 websandbox/
-├── web.js          ← Main Express server (CJS)
-├── package.json    ← Dependencies & scripts
-├── vercel.json     ← Vercel deployment config
+├── web.js              ← Express backend (Node.js CJS)
+├── package.json        ← Dependencies
+├── vercel.json         ← Vercel deploy config
 ├── .gitignore
 ├── README.md
 └── public/
-    └── home.html   ← Frontend UI
+    └── home.html       ← Full frontend UI
 ```
 
 ---
 
 ## 🚀 Deploy to Vercel
 
-### 1. Push to GitHub
+### Step 1 — Push to GitHub
 
 ```bash
 git init
 git add .
-git commit -m "Initial commit: WebSandbox"
+git commit -m "WebSandbox v3"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/websandbox.git
 git push -u origin main
 ```
 
-### 2. Deploy with Vercel
+### Step 2 — Import on Vercel
 
-**Option A — Vercel CLI:**
-```bash
-npm i -g vercel
-vercel
-```
-
-**Option B — Vercel Dashboard:**
-1. Go to [vercel.com](https://vercel.com) → New Project
+1. Go to [vercel.com/new](https://vercel.com/new)
 2. Import your GitHub repo
 3. Framework Preset: **Other**
-4. Leave all settings default → **Deploy**
+4. Root Directory: *(leave blank)*
+5. Click **Deploy**
 
-### 3. Done! 🎉
+### Step 3 — Done! 🎉
 
-Your sandbox will be live at `https://your-project.vercel.app`
+Your sandbox runs at `https://YOUR_PROJECT.vercel.app`
 
 ---
 
-## 🖥 Run Locally
+## 💻 Run Locally
 
 ```bash
 npm install
@@ -72,28 +73,41 @@ npm start
 # → http://localhost:3000
 ```
 
-Requires **Node.js v20+** (v24 recommended).
+Requires Node.js v20+ (v24 recommended).
 
 ---
 
-## ⚙️ How Sessions Work
+## 🍪 How Sessions & Cookies Work
 
-| Storage | What's stored | Survives |
-|---------|--------------|----------|
-| `localStorage` | Session ID, history, bookmarks, last URL | Reload, tab close, browser restart |
-| Server (in-memory) | Same data synced | Server restart (Vercel serverless instances) |
-
-> **Note:** On Vercel's serverless infrastructure, in-memory server state may reset between cold starts. However, because the client always syncs from `localStorage` on boot and pushes to the server, your data is always restored from the client side — making sessions fully persistent on the user's device.
+- Each browser gets a unique session ID stored in `localStorage`
+- The server maintains a **per-session cookie jar** (domain-aware)
+- Cookies set by proxied sites are stored and sent back on subsequent requests
+- This enables **login flows** on many sites
+- State (history, bookmarks, current URL) saved to localStorage every 8s + on visibility change
 
 ---
 
-## 🔒 Sandbox Limitations
+## 🛡 Fetch Strategy (Multi-fallback)
 
-- Sites using **Content Security Policy** (CSP) may restrict some resources
-- **Login sessions** inside the sandbox are not preserved (cookies are not proxied)
-- Some sites detect and block proxy/scraper user agents
-- WebSocket connections are not supported through the proxy
-- JavaScript that makes cross-origin XHR/fetch calls may fail inside the sandbox
+When loading a page, the proxy tries 4 strategies in order:
+
+1. **Desktop Chrome** — `Mozilla/5.0 Windows Chrome/124` with full Sec-Fetch headers
+2. **Mobile Safari** — iPhone UA (bypasses some desktop-only blocks)
+3. **Minimal curl** — bare-bones headers (bypasses some anti-bot checks)
+4. **Googlebot** — search crawler UA (many sites allow Googlebot)
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Reason |
+|-----------|--------|
+| Cloudflare JS challenge | Requires real browser JS execution; not possible in server proxy |
+| Google/Facebook login | OAuth redirect chains are complex to proxy |
+| WebSocket apps | WS connections not proxied (real-time features won't work) |
+| Service Workers | Cannot be registered in proxied context |
+| CAPTCHA | Human verification requires real browser |
+| Some SPAs | Client-side routing may partially break |
 
 ---
 
@@ -102,13 +116,22 @@ Requires **Node.js v20+** (v24 recommended).
 | Package | Purpose |
 |---------|---------|
 | `express` | HTTP server |
-| `node-fetch` | Fetching remote pages |
-| `cheerio` | HTML parsing & URL rewriting |
-| `uuid` | Generating session IDs |
-| `cors` | Cross-origin headers |
+| `node-fetch` | Fetch remote pages |
+| `cheerio` | HTML rewriting |
+| `uuid` | Session ID generation |
+| `cors` | CORS headers |
+| `tough-cookie` | Cookie parsing (reference) |
+| `follow-redirects` | Enhanced redirect following |
 
 ---
 
-## 📄 License
+## ⌨️ Keyboard Shortcuts
 
-MIT — free to use, modify, and deploy.
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+L` | Focus URL bar |
+| `Ctrl+D` | Bookmark current page |
+
+---
+
+MIT License
