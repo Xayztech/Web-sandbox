@@ -1,0 +1,20 @@
+{
+  "name": "web-sandbox",
+  "version": "1.0.0",
+  "description": "Web Sandbox - Browse websites safely in an isolated environment",
+  "main": "web.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node web.js",
+    "dev": "node web.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "cheerio": "^1.0.0-rc.12",
+    "uuid": "^9.0.0",
+    "cors": "^2.8.5"
+  }
+}
